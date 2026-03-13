@@ -127,24 +127,6 @@
                         <i class="ph ph-magnifying-glass text-amber-400 group-hover:text-amber-300"></i>
                         <span class="text-sm">Tìm kiếm nhị phân</span>
                     </button>
-                    
-                    <!-- Các chủ đề mới thêm vào -->
-                    <button onclick="quickAsk('Giải thích cơ bản về Quy hoạch động và bài toán cái túi (Knapsack)')" class="w-full text-left p-3 rounded-lg bg-slate-800/50 hover:bg-slate-700 transition border border-slate-700/50 flex items-center gap-2 group">
-                        <i class="ph ph-chart-bar text-pink-400 group-hover:text-pink-300"></i>
-                        <span class="text-sm">Quy hoạch động</span>
-                    </button>
-                    <button onclick="quickAsk('So sánh và hướng dẫn cài đặt thuật toán duyệt đồ thị BFS và DFS')" class="w-full text-left p-3 rounded-lg bg-slate-800/50 hover:bg-slate-700 transition border border-slate-700/50 flex items-center gap-2 group">
-                        <i class="ph ph-graph text-teal-400 group-hover:text-teal-300"></i>
-                        <span class="text-sm">Đồ thị BFS/DFS</span>
-                    </button>
-                    <button onclick="quickAsk('Đệ quy là gì? Cho ví dụ tính giai thừa hoặc dãy Fibonacci bằng đệ quy')" class="w-full text-left p-3 rounded-lg bg-slate-800/50 hover:bg-slate-700 transition border border-slate-700/50 flex items-center gap-2 group">
-                        <i class="ph ph-tree-structure text-rose-400 group-hover:text-rose-300"></i>
-                        <span class="text-sm">Đệ quy (Recursion)</span>
-                    </button>
-                    <button onclick="quickAsk('Hướng dẫn các hàm xử lý xâu (chuỗi) thường dùng trong C++')" class="w-full text-left p-3 rounded-lg bg-slate-800/50 hover:bg-slate-700 transition border border-slate-700/50 flex items-center gap-2 group">
-                        <i class="ph ph-text-aa text-cyan-400 group-hover:text-cyan-300"></i>
-                        <span class="text-sm">Xử lý xâu C++</span>
-                    </button>
                 </div>
             </div>
 
@@ -218,42 +200,15 @@
     </div>
 
     <script>
-        // API Configuration setup - provided by runtime environment
-        // ĐỪNG QUÊN DÁN API KEY VÀO ĐÂY:
-        const apiKey = "AIzaSyBou4Sq3pbtbR-EnjF_I0MkqzjyH5MIRFM"; 
+        // ==========================================
+        // DÁN API KEY MỚI CỦA BẠN VÀO GIỮA 2 DẤU NGOẶC KÉP BÊN DƯỚI
+        // ==========================================
+        const apiKey = ""; 
 
-        const systemPrompt = `
-Bạn là một trợ lý AI chuyên dạy Tin học cho học sinh THPT Việt Nam.
+        const systemPrompt = `Bạn là một trợ lý AI chuyên dạy Tin học cho học sinh THPT Việt Nam.
+Mục tiêu: Giúp học sinh hiểu sâu thuật toán và ngôn ngữ lập trình.
+Phong cách: Dễ hiểu, thân thiện, xưng "Thầy/Cô" hoặc "Tôi" và gọi "em/bạn".`;
 
-Mục tiêu:
-Giúp học sinh hiểu sâu thuật toán và ngôn ngữ lập trình.
-
-Đối tượng:
-- Học sinh THPT cơ bản.
-- Học sinh ôn thi học sinh giỏi Tin học.
-- Người mới bắt đầu học lập trình.
-
-Nhiệm vụ:
-1. Giải thích kiến thức Tin học rõ ràng, dùng ngôn ngữ dễ hiểu.
-2. Hướng dẫn chi tiết C++ và Python.
-3. Giải bài toán thuật toán.
-4. Dạy tư duy giải bài, không chỉ đưa code.
-
-Khi giải bài tập, CẦN theo cấu trúc sau (có thể linh hoạt bỏ qua nếu câu hỏi chỉ là lý thuyết ngắn):
-1. **Phân tích bài toán**: Nhận diện input, output, yêu cầu.
-2. **Ý tưởng giải**: Giải thích logic bằng lời văn dễ hiểu.
-3. **Thuật toán**: Mô tả các bước hoặc mã giả.
-4. **Code minh họa**: Cung cấp code C++ hoặc Python rõ ràng, có comment chi tiết từng dòng quan trọng.
-5. **Phân tích độ phức tạp**: Đánh giá Time (Thời gian) và Space (Không gian).
-6. **Ví dụ minh họa (Trace code)**: Chạy thử một ví dụ nhỏ.
-
-Phong cách:
-- Dễ hiểu, thân thiện, xưng "Thầy/Cô" hoặc "Tôi" và gọi "em/bạn".
-- Hướng dẫn từng bước.
-- Cực kỳ phù hợp với học sinh THPT.
-`;
-
-        // Configure marked.js to use highlight.js for code blocks
         marked.setOptions({
             highlight: function(code, lang) {
                 const language = hljs.getLanguage(lang) ? lang : 'plaintext';
@@ -294,10 +249,8 @@ Phong cách:
             };
 
             if (navigator.share) {
-                // Sử dụng tính năng chia sẻ gốc của điện thoại/trình duyệt
                 navigator.share(shareData).catch((error) => console.log('Lỗi chia sẻ', error));
             } else {
-                // Fallback: Copy link vào clipboard khi không hỗ trợ Web Share API
                 const textArea = document.createElement("textarea");
                 textArea.value = window.location.href;
                 document.body.appendChild(textArea);
@@ -351,7 +304,6 @@ Phong cách:
 
             chatBox.appendChild(msgEl);
             
-            // Trigger reflow for fade-in animation
             setTimeout(() => {
                 msgEl.classList.remove('opacity-0');
                 chatBox.scrollTop = chatBox.scrollHeight;
@@ -391,7 +343,6 @@ Phong cách:
             const input = document.getElementById("userInput");
             input.value = text;
             
-            // Close sidebar on mobile after selecting
             if (window.innerWidth < 768 && !document.getElementById('sidebar').classList.contains('-translate-x-full')) {
                 toggleSidebar();
             }
@@ -406,7 +357,6 @@ Phong cách:
             }
         }
 
-        // Exponential backoff for API Calls
         async function fetchWithBackoff(url, options, retries = 5) {
             const delays = [1000, 2000, 4000, 8000, 16000];
             for (let i = 0; i < retries; i++) {
@@ -414,19 +364,14 @@ Phong cách:
                     const response = await fetch(url, options);
                     if (!response.ok) {
                         const errData = await response.json().catch(() => ({}));
-                        let errMsg = errData?.error?.message || 'Lỗi không xác định';
                         
-                        // Dịch các lỗi phổ biến để người dùng dễ hiểu
-                        if (response.status === 400 && errMsg.toLowerCase().includes("api key not valid")) {
-                            errMsg = "API Key không hợp lệ. Vui lòng kiểm tra lại quá trình Copy/Paste API Key.";
-                        } else if (response.status === 404) {
-                            errMsg = "Không tìm thấy Model Google. Vui lòng đảm bảo bạn đang sử dụng mã API chính xác.";
-                        } else if (response.status === 403) {
-                            errMsg = "Truy cập bị từ chối. API Key của bạn có thể bị giới hạn hoặc chưa kích hoạt.";
-                        }
-
+                        // Lấy chính xác nguyên văn câu báo lỗi của Google (bằng tiếng Anh)
+                        const googleRawError = errData?.error?.message || response.statusText || 'Không xác định';
+                        
                         console.error("Chi tiết lỗi từ Google API:", errData);
-                        throw new Error(`HTTP ${response.status} - ${errMsg}`);
+                        
+                        // Ném lỗi ra kèm theo Status Code và RAW ERROR
+                        throw new Error(`HTTP ${response.status} - Google API Error: "${googleRawError}"`);
                     }
                     return await response.json();
                 } catch (error) {
@@ -445,7 +390,6 @@ Phong cách:
             
             if (!text) return;
             
-            // Setup UI for loading
             isWaitingForResponse = true;
             input.value = "";
             input.style.height = "auto";
@@ -456,7 +400,6 @@ Phong cách:
             addMessage(text, "user");
             addTypingIndicator();
 
-            // SỬ DỤNG MODEL gemini-1.5-flash TIÊU CHUẨN ĐỂ ĐẢM BẢO HOẠT ĐỘNG
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
             
             const body = {
@@ -466,7 +409,7 @@ Phong cách:
 
             try {
                 if (!apiKey || apiKey.trim() === "") {
-                    throw new Error("Bạn chưa điền API Key vào mã nguồn (const apiKey = '...'). Vui lòng chỉnh sửa file index.html để thêm API Key.");
+                    throw new Error("Bạn chưa điền API Key. Vui lòng mở code lên và dán key vào biến apiKey nhé.");
                 }
 
                 const data = await fetchWithBackoff(url, {
@@ -487,10 +430,9 @@ Phong cách:
                 console.error("API Error:", error);
                 removeTypingIndicator();
                 
-                // HIỂN THỊ CHI TIẾT LỖI RA MÀN HÌNH CHAT
-                addMessage(`⚠️ **Hệ thống báo lỗi:**\n${error.message}\n\n*Nếu bạn vừa sửa code trên GitHub, hãy nhớ nhấn **Ctrl + F5** để tải lại trang nhé!*`, "ai", true);
+                // Hiển thị nguyên văn lỗi để dễ bắt bệnh
+                addMessage(`⚠️ **Có lỗi xảy ra:**\n\`${error.message}\`\n\n*(Hãy chụp màn hình lỗi tiếng Anh này gửi lại để tôi hỗ trợ bạn nhé)*`, "ai", true);
             } finally {
-                // Restore UI
                 isWaitingForResponse = false;
                 input.disabled = false;
                 sendBtn.disabled = false;
@@ -501,7 +443,6 @@ Phong cách:
 
         function clearChat() {
             const chatBox = document.getElementById("chatBox");
-            // Keep only the first welcome message
             const firstChild = chatBox.firstElementChild;
             chatBox.innerHTML = '';
             chatBox.appendChild(firstChild);
@@ -514,6 +455,7 @@ Phong cách:
     </script>
 </body>
 </html>
+
 
 
 
