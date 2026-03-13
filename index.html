@@ -219,7 +219,8 @@
 
     <script>
         // API Configuration setup - provided by runtime environment
-        const apiKey = "AIzaSyBou4Sq3pbtbR-EnjF_I0MkqzjyH5MIRFM"; 
+        // ĐỪNG QUÊN DÁN API KEY VÀO ĐÂY:
+        const apiKey = ""; 
 
         const systemPrompt = `
 Bạn là một trợ lý AI chuyên dạy Tin học cho học sinh THPT Việt Nam.
@@ -412,7 +413,20 @@ Phong cách:
                 try {
                     const response = await fetch(url, options);
                     if (!response.ok) {
-                        throw new Error(`HTTP Error: ${response.status}`);
+                        const errData = await response.json().catch(() => ({}));
+                        let errMsg = errData?.error?.message || 'Lỗi không xác định';
+                        
+                        // Dịch các lỗi phổ biến để người dùng dễ hiểu
+                        if (response.status === 400 && errMsg.toLowerCase().includes("api key not valid")) {
+                            errMsg = "API Key không hợp lệ. Vui lòng kiểm tra lại quá trình Copy/Paste API Key.";
+                        } else if (response.status === 404) {
+                            errMsg = "Không tìm thấy Model Google. Vui lòng đảm bảo bạn đang sử dụng mã API chính xác.";
+                        } else if (response.status === 403) {
+                            errMsg = "Truy cập bị từ chối. API Key của bạn có thể bị giới hạn hoặc chưa kích hoạt.";
+                        }
+
+                        console.error("Chi tiết lỗi từ Google API:", errData);
+                        throw new Error(`HTTP ${response.status} - ${errMsg}`);
                     }
                     return await response.json();
                 } catch (error) {
@@ -441,15 +455,20 @@ Phong cách:
             
             addMessage(text, "user");
             addTypingIndicator();
-            
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-                const body = {
+            // SỬ DỤNG MODEL gemini-1.5-flash TIÊU CHUẨN ĐỂ ĐẢM BẢO HOẠT ĐỘNG
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            
+            const body = {
                 contents: [{ parts: [{ text: text }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] }
             };
 
             try {
+                if (!apiKey || apiKey.trim() === "") {
+                    throw new Error("Bạn chưa điền API Key vào mã nguồn (const apiKey = '...'). Vui lòng chỉnh sửa file index.html để thêm API Key.");
+                }
+
                 const data = await fetchWithBackoff(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -467,7 +486,9 @@ Phong cách:
             } catch (error) {
                 console.error("API Error:", error);
                 removeTypingIndicator();
-                addMessage("⚠️ Đã xảy ra lỗi kết nối mạng hoặc hệ thống. Vui lòng thử lại sau ít phút.", "ai");
+                
+                // HIỂN THỊ CHI TIẾT LỖI RA MÀN HÌNH CHAT
+                addMessage(`⚠️ **Hệ thống báo lỗi:**\n${error.message}\n\n*Nếu bạn vừa sửa code trên GitHub, hãy nhớ nhấn **Ctrl + F5** để tải lại trang nhé!*`, "ai", true);
             } finally {
                 // Restore UI
                 isWaitingForResponse = false;
@@ -492,7 +513,6 @@ Phong cách:
 
     </script>
 </body>
-
 </html>
 
 
