@@ -199,293 +199,192 @@
         <span id="toastMsg" class="text-sm font-medium"></span>
     </div>
 
-    <script>
-        // ==========================================
-        // DÁN API KEY CỦA BẠN VÀO ĐÂY:
-        // ==========================================
-        const apiKey = "AIzaSyDNngivvqr-_pgcdPYddPRiB8xPWhycvWk"; 
+   <script>
+/* ===============================
+   CONFIG
+================================ */
 
-        const systemPrompt = `Bạn là một trợ lý AI chuyên dạy Tin học cho học sinh THPT Việt Nam.
-Mục tiêu: Giúp học sinh hiểu sâu thuật toán và ngôn ngữ lập trình.
-Phong cách: Dễ hiểu, thân thiện, xưng "Thầy/Cô" hoặc "Tôi" và gọi "em/bạn".`;
+const apiKey = "PASTE_YOUR_API_KEY_HERE";
 
-        marked.setOptions({
-            highlight: function(code, lang) {
-                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-                return hljs.highlight(code, { language }).value;
+const MODEL = "gemini-1.5-flash-latest";
+
+const API_URL =
+`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+
+const systemPrompt = `
+Bạn là AI gia sư Tin học cho học sinh THPT Việt Nam.
+Giải thích dễ hiểu, có ví dụ và code minh họa C++ hoặc Python.
+Luôn phân tích bài toán trước khi đưa code.
+`;
+
+/* ===============================
+   CHAT MEMORY
+================================ */
+
+let history = [];
+
+history.push({
+    role: "user",
+    parts: [{ text: systemPrompt }]
+});
+
+/* ===============================
+   RATE LIMIT
+================================ */
+
+let lastRequestTime = 0;
+const REQUEST_DELAY = 1200;
+
+/* ===============================
+   API CALL WITH RETRY
+================================ */
+
+async function callGemini(contents, retry = 3) {
+
+    const now = Date.now();
+    const diff = now - lastRequestTime;
+
+    if (diff < REQUEST_DELAY) {
+        await new Promise(r => setTimeout(r, REQUEST_DELAY - diff));
+    }
+
+    lastRequestTime = Date.now();
+
+    try {
+
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
             },
-            langPrefix: 'hljs language-',
-            breaks: true
+            body: JSON.stringify({
+                contents: contents
+            })
         });
 
-        let isWaitingForResponse = false;
-        let autoDetectedModel = ""; // Biến lưu tên model Google cho phép dùng
+        if (!response.ok) {
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
-        }
+            if (response.status === 429 && retry > 0) {
 
-        function showToast(message) {
-            const toast = document.getElementById("toast");
-            const toastMsg = document.getElementById("toastMsg");
-            toastMsg.textContent = message;
-            
-            toast.classList.remove("translate-y-20", "opacity-0");
-            toast.classList.add("translate-y-0", "opacity-100");
-            
-            setTimeout(() => {
-                toast.classList.remove("translate-y-0", "opacity-100");
-                toast.classList.add("translate-y-20", "opacity-0");
-            }, 3000);
-        }
+                const wait = (4 - retry) * 2000;
 
-        function shareApp() {
-            const shareData = {
-                title: 'AI Gia Sư Tin học THPT',
-                text: 'Trợ lý AI giúp học tập, giải thuật toán và lập trình.',
-                url: window.location.href
-            };
+                console.log("Rate limited. Retry in", wait);
 
-            if (navigator.share) {
-                navigator.share(shareData).catch((error) => console.log('Lỗi chia sẻ', error));
-            } else {
-                const textArea = document.createElement("textarea");
-                textArea.value = window.location.href;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    showToast("Đã sao chép đường link ứng dụng!");
-                } catch (err) {
-                    console.error('Không thể sao chép', err);
-                }
-                document.body.removeChild(textArea);
-            }
-        }
+                await new Promise(r => setTimeout(r, wait));
 
-        function createMessageElement(type) {
-            const div = document.createElement("div");
-            div.className = "flex gap-4 items-start w-full max-w-3xl mx-auto opacity-0 transition-opacity duration-300";
-            
-            if (type === 'user') {
-                div.innerHTML = `
-                    <div class="flex-1 bg-indigo-600/20 text-indigo-100 rounded-2xl p-4 md:p-5 rounded-tr-none border border-indigo-500/30 shadow-sm ml-8 md:ml-12">
-                        <div class="prose prose-invert message-content whitespace-pre-wrap font-medium"></div>
-                    </div>
-                    <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-slate-600">
-                        <i class="ph ph-user text-xl text-slate-300"></i>
-                    </div>
-                `;
-            } else {
-                div.innerHTML = `
-                    <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-900/20">
-                        <i class="ph ph-robot text-xl text-white"></i>
-                    </div>
-                    <div class="flex-1 bg-slate-800 rounded-2xl p-4 md:p-5 rounded-tl-none border border-slate-700 shadow-sm mr-2 md:mr-12 overflow-hidden">
-                        <div class="prose prose-invert max-w-none message-content text-slate-200"></div>
-                    </div>
-                `;
-            }
-            return div;
-        }
-
-        function addMessage(text, type, isMarkdown = false) {
-            const chatBox = document.getElementById("chatBox");
-            const msgEl = createMessageElement(type);
-            const contentEl = msgEl.querySelector('.message-content');
-            
-            if (isMarkdown && type === 'ai') {
-                contentEl.innerHTML = marked.parse(text);
-            } else {
-                contentEl.textContent = text;
+                return callGemini(contents, retry - 1);
             }
 
-            chatBox.appendChild(msgEl);
-            
-            setTimeout(() => {
-                msgEl.classList.remove('opacity-0');
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }, 50);
+            const err = await response.text();
+            throw new Error(err);
         }
 
-        function addTypingIndicator() {
-            const chatBox = document.getElementById("chatBox");
-            const div = document.createElement("div");
-            div.id = "typingIndicator";
-            div.className = "flex gap-4 items-start w-full max-w-3xl mx-auto opacity-0 transition-opacity duration-300";
-            div.innerHTML = `
-                <div class="w-10 h-10 rounded-full bg-indigo-600/50 flex items-center justify-center shrink-0">
-                    <i class="ph ph-robot text-xl text-white/70"></i>
-                </div>
-                <div class="bg-slate-800 rounded-2xl p-4 md:p-5 rounded-tl-none border border-slate-700 flex items-center gap-1 h-[56px]">
-                    <div class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></div>
-                    <div class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></div>
-                    <div class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></div>
-                </div>
-            `;
-            chatBox.appendChild(div);
-            
-            setTimeout(() => {
-                div.classList.remove('opacity-0');
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }, 50);
+        return await response.json();
+
+    } catch (err) {
+
+        if (retry > 0) {
+            await new Promise(r => setTimeout(r, 2000));
+            return callGemini(contents, retry - 1);
         }
 
-        function removeTypingIndicator() {
-            const indicator = document.getElementById("typingIndicator");
-            if (indicator) indicator.remove();
-        }
+        throw err;
+    }
+}
 
-        function quickAsk(text) {
-            if (isWaitingForResponse) return;
-            const input = document.getElementById("userInput");
-            input.value = text;
-            
-            if (window.innerWidth < 768 && !document.getElementById('sidebar').classList.contains('-translate-x-full')) {
-                toggleSidebar();
-            }
-            
-            sendMessage();
-        }
+/* ===============================
+   SEND MESSAGE
+================================ */
 
-        function handleKeyDown(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
-            }
-        }
+async function sendMessage() {
 
-        async function fetchWithBackoff(url, options, retries = 3) {
-            const delays = [1000, 2000, 4000];
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) {
-                        const errData = await response.json().catch(() => ({}));
-                        const googleRawError = errData?.error?.message || response.statusText || 'Không xác định';
-                        throw new Error(`HTTP ${response.status} - Google API Error: "${googleRawError}"`);
-                    }
-                    return await response.json();
-                } catch (error) {
-                    if (i === retries - 1) throw error;
-                    await new Promise(resolve => setTimeout(resolve, delays[i]));
-                }
-            }
-        }
+    if (isWaitingForResponse) return;
 
-        // HÀM QUAN TRỌNG: Tự động hỏi Google xem tài khoản được dùng Model nào
-        async function getBestAvailableModel() {
-            if (autoDetectedModel) return autoDetectedModel; // Nếu đã tìm được rồi thì dùng luôn
+    const input = document.getElementById("userInput");
+    const text = input.value.trim();
 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-            const data = await fetchWithBackoff(url, { method: "GET" }, 2);
+    if (!text) return;
 
-            if (!data.models || data.models.length === 0) {
-                throw new Error("Không thể tải danh sách Model từ Google.");
-            }
+    input.value = "";
+    input.style.height = "auto";
 
-            // Lọc ra các model có hỗ trợ chat (generateContent) và tên có chữ "gemini"
-            const validModels = data.models.filter(m =>
-                m.supportedGenerationMethods &&
-                m.supportedGenerationMethods.includes("generateContent") &&
-                m.name.includes("gemini")
-            );
+    addMessage(text, "user");
 
-            if (validModels.length === 0) {
-                throw new Error("API Key của bạn không được phép dùng bất kỳ model Gemini nào.");
-            }
+    history.push({
+        role: "user",
+        parts: [{ text }]
+    });
 
-            // Ưu tiên chọn model flash vì nó xử lý code nhanh nhất và thông minh
-            let chosen = validModels.find(m => m.name === "models/gemini-1.5-flash"); // Tìm đúng tên chuẩn
-            if (!chosen) chosen = validModels.find(m => m.name.includes("1.5-flash")); // Hoặc biến thể của nó
-            if (!chosen) chosen = validModels.find(m => m.name.includes("2.0-flash")); // Hoặc bản 2.0
-            if (!chosen) chosen = validModels.find(m => m.name.includes("flash"));     // Hoặc bất kỳ bản flash nào
-            if (!chosen) chosen = validModels[0]; // Nếu không có flash, lấy đại model đầu tiên có trong danh sách
+    addTypingIndicator();
 
-            autoDetectedModel = chosen.name; // Tên model trả về dạng "models/gemini-..."
-            console.log("Hệ thống đã tự động chọn Model:", autoDetectedModel);
-            return autoDetectedModel;
-        }
+    isWaitingForResponse = true;
 
-        async function sendMessage() {
-            if (isWaitingForResponse) return;
+    try {
 
-            const input = document.getElementById("userInput");
-            const sendBtn = document.getElementById("sendBtn");
-            const text = input.value.trim();
-            
-            if (!text) return;
-            
-            isWaitingForResponse = true;
-            input.value = "";
-            input.style.height = "auto";
-            input.disabled = true;
-            sendBtn.disabled = true;
-            sendBtn.innerHTML = '<i class="ph ph-spinner animate-spin text-lg"></i>';
-            
-            addMessage(text, "user");
-            addTypingIndicator();
+        const data = await callGemini(history);
 
-            try {
-                if (!apiKey || apiKey.trim() === "") {
-                    throw new Error("Bạn chưa điền API Key. Vui lòng mở code lên và dán key vào biến apiKey nhé.");
-                }
+        removeTypingIndicator();
 
-                // 1. Tự động tìm model được phép dùng
-                const modelName = await getBestAvailableModel();
+        const reply =
+            data.candidates?.[0]?.content?.parts?.[0]?.text ||
+            "Thầy chưa thể trả lời câu hỏi này.";
 
-                // 2. Gắn tên model vừa tìm được vào URL
-                // Lưu ý: modelName đã chứa sẵn chữ "models/" rồi nên không cần ghi lại nữa
-                const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
-                
-                const body = {
-                    contents: [{ parts: [{ text: text }] }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] }
-                };
+        addMessage(reply, "ai", true);
 
-                const data = await fetchWithBackoff(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(body)
-                });
+        history.push({
+            role: "model",
+            parts: [{ text: reply }]
+        });
 
-                removeTypingIndicator();
+    } catch (err) {
 
-                if (data.candidates && data.candidates.length > 0) {
-                    const reply = data.candidates[0].content.parts[0].text;
-                    addMessage(reply, "ai", true);
-                } else {
-                    addMessage("Xin lỗi, thầy không thể tạo câu trả lời lúc này. Em hãy thử lại nhé.", "ai");
-                }
-            } catch (error) {
-                console.error("API Error:", error);
-                removeTypingIndicator();
-                
-                addMessage(`⚠️ **Hệ thống báo lỗi:**\n\`${error.message}\``, "ai", true);
-            } finally {
-                isWaitingForResponse = false;
-                input.disabled = false;
-                sendBtn.disabled = false;
-                sendBtn.innerHTML = '<i class="ph-fill ph-paper-plane-right text-lg"></i>';
-                input.focus();
-            }
-        }
+        console.error(err);
 
-        function clearChat() {
-            const chatBox = document.getElementById("chatBox");
-            const firstChild = chatBox.firstElementChild;
-            chatBox.innerHTML = '';
-            chatBox.appendChild(firstChild);
-            
-            if (window.innerWidth < 768 && !document.getElementById('sidebar').classList.contains('-translate-x-full')) {
-                toggleSidebar();
-            }
-        }
+        removeTypingIndicator();
 
-    </script>
+        addMessage(
+            "⚠️ Hệ thống AI đang quá tải hoặc lỗi mạng. Em thử lại sau nhé.",
+            "ai"
+        );
+    }
+
+    isWaitingForResponse = false;
+}
+
+/* ===============================
+   CLEAR CHAT
+================================ */
+
+function clearChat() {
+
+    history = [];
+
+    history.push({
+        role: "user",
+        parts: [{ text: systemPrompt }]
+    });
+
+    const chatBox = document.getElementById("chatBox");
+
+    const firstChild = chatBox.firstElementChild;
+
+    chatBox.innerHTML = "";
+
+    chatBox.appendChild(firstChild);
+}
+
+/* ===============================
+   ENTER KEY
+================================ */
+
+function handleKeyDown(e) {
+
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+}
+</script>
 </body>
 </html>
 
